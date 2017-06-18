@@ -144,7 +144,7 @@ class TestProlog(TestCase):
         p.go(C.make_const(1) & (C.make_const(2) & C.make_const(3)), go)
         self.assertEqual(w, 1)
 
-    def test_something(self):
+    def test_head_body(self):
         x = V.make_variable("x")
         y = V.make_variable("y")
         p = Prolog()
@@ -161,3 +161,18 @@ class TestProlog(TestCase):
 
         p.go(x.pair(y.make_const('c')), check)
         self.assertEqual(w, 1)
+
+    def test_member(self):
+        x = V.make_variable("x")
+        y = V.make_variable("y")
+        z = V.make_variable("z")
+
+        p = Prolog()
+        p.fact(x.pair(y.pair(x)).make_const("member"))
+        p.head_body(x.pair(y.pair(z)).make_const("member"),
+                    x.pair(y).make_const("member"))
+
+        w = []
+        p.go(x.pair(L.make_const(1).make_const(2).make_const(3)),
+             lambda: w.append(x.value()))
+        self.assertEqual(w, [3, 2, 1])
