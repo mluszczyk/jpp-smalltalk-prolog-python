@@ -196,6 +196,9 @@ class Value:
     def get_ref(self):
         raise Exception("not a ref")
 
+    def has_occurrence(self, ref):
+        raise NotImplementedError()
+
 
 class ConstValue(Value):
     def __init__(self, val):
@@ -234,6 +237,9 @@ class ConstValue(Value):
 
     def unify_with_var(self, value: Value):
         return value.unify_with_const(self.val)
+
+    def has_occurrence(self, ref):
+        return False
 
 
 class PairValue(Value):
@@ -279,6 +285,9 @@ class PairValue(Value):
     def unify(self, other):
         return other.unify_with_pair(self.key1, self.key2)
 
+    def has_occurrence(self, ref):
+        return self.key1.has_occurrence(ref) or self.key2.has_occurrence(ref)
+
 
 class RefValue(Value):
     def __init__(self, ref):
@@ -312,6 +321,8 @@ class RefValue(Value):
         return [(self.ref, ConstValue(value))]
 
     def unify_with_pair(self, a: Value, b: Value):
+        if a.has_occurrence(self.ref) or b.has_occurrence(self.ref):
+            return None
         return [(self.ref, PairValue(a, b))]
 
     def unify_with_var(self, other: Value):
@@ -319,6 +330,9 @@ class RefValue(Value):
 
     def get_ref(self):
         return self.ref
+
+    def has_occurrence(self, ref):
+        return self.ref == ref
 
 
 L = C.make_const(None)

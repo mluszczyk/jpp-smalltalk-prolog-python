@@ -54,8 +54,6 @@ class TestOne(TestCase):
         def check():
             nonlocal w
             w += 1
-            print({k: str(v) for k, v in global_store.items.items()})
-            print(global_store.variables)
             assert x.value() == 2
             assert y.value() == 1
 
