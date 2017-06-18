@@ -42,6 +42,38 @@ class Handle:
     def __eq__(self, other):
         return self.ref_ == other.ref_
 
+    def __and__(self, other) -> 'HandleConjunction':
+        return HandleConjunction.from_handle(self) & other
+
+    def to_conjunction(self) -> 'HandleConjunction':
+        return HandleConjunction.from_handle(self)
+
+
+class HandleConjunction:
+    def __init__(self, handles: typing.List[Handle]):
+        self.handles: typing.List[Handle] = handles
+
+    @staticmethod
+    def from_handle(handle) -> 'HandleConjunction':
+        return HandleConjunction([handle])
+
+    def __and__(self, other: typing.Union[Handle, 'HandleConjunction']) ->\
+            'HandleConjunction':
+        con = other.to_conjunction()
+        return HandleConjunction(self.handles + con.handles)
+
+    def to_conjunction(self) -> 'HandleConjunction':
+        return self
+
+    def empty(self) -> bool:
+        return bool(self.handles)
+
+    def head(self) -> Handle:
+        return self.handles[0]
+
+    def tail(self) -> 'HandleConjunction':
+        return HandleConjunction(self.handles[1:])
+
 
 class C:
     @staticmethod
@@ -328,3 +360,55 @@ class RefValue(Value):
 
 
 L = C.make_const(None)
+
+
+class Predicate:
+    def go(self, query: typing.Union['Handle', 'HandleConjunction'], do: typing.Callable):
+        raise NotImplementedError()
+
+
+class Fact(Predicate):
+    def __init__(self, a: Handle):
+        self.a: Handle = a
+
+    def go(self, a: Handle, do: typing.Callable):
+        self.a.go(a, do)
+
+
+class HeadBody(Predicate):
+    def __init__(self, prolog: 'Prolog', head: Handle, body: HandleConjunction):
+        self.head: Handle = head
+        self.body: HandleConjunction = body
+        self.prolog: Prolog = prolog
+
+    def go(self, query: Handle, do: typing.Callable):
+        def inner_do():
+            self.prolog.go(self.body, do)
+
+        self.head.go(query, inner_do)
+
+
+class Prolog:
+    def __init__(self):
+        self.predicates: typing.List[Predicate] = []
+
+    def fact(self, a):
+        self.predicates.append(Fact(a))
+
+    def head_body(self, head, body):
+        self.predicates.append(HeadBody(self, head, body))
+
+    def go(self, handle: typing.Union[Handle, HandleConjunction], do: typing.Callable):
+        full_con = handle.to_conjunction()
+
+        def do_builder(handle_con):
+            def inner_do():
+                if handle_con.empty():
+                    do()
+                else:
+                    for item in self.predicates:
+                        item.go(handle_con.head(), do_builder(handle_con.tail())())
+
+            return inner_do
+
+        do_builder(full_con)()

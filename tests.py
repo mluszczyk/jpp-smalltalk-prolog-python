@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from prolog import L, V, C, global_store
+from prolog import L, V, C, global_store, Prolog
 
 
 class TestOne(TestCase):
@@ -105,3 +105,37 @@ class TestOne(TestCase):
     def test_occur_check(self):
         x = V.make_variable('x')
         x.go(L.pair(x), lambda: self.assertTrue(False))
+
+
+class TestProlog(TestCase):
+    def test(self):
+        x = V.make_variable('x')
+        t = [1, 2, 3]
+        p = Prolog()
+        for e in t:
+            p.fact(C.make_const(e))
+        w = []
+        p.go(x, lambda: w.append(x.value()))
+        self.assertEqual(w, t)
+
+    def test_and(self):
+        w = 0
+        p = Prolog()
+
+        def go():
+            nonlocal w
+            w += 1
+
+        p.go(C.make_const(1) & C.make_const(2) & C.make_const(3), go)
+        self.assertEqual(w, 1)
+
+    def test_and_nested(self):
+        w = 0
+        p = Prolog()
+
+        def go():
+            nonlocal w
+            w += 1
+
+        p.go(C.make_const(1) & (C.make_const(2) & C.make_const(3)), go)
+        self.assertEqual(w, 1)
