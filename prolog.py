@@ -112,7 +112,6 @@ class Store:
         return new_store
 
     def substitute(self, name, value: 'Value'):
-        print("substitute({}, {})".format(name, value))
         new_items = {name: value}
         for left, right in self.items.items():
             new_items[left] = right.substitute(name, value)
@@ -129,16 +128,12 @@ class Store:
         return subst_list
 
     def substitute_list(self, subst_list):
-        print("substitute list", [(a, str(b)) for a, b in subst_list])
         self.fix_subst_list(subst_list)
-        print("fixed list", [(a, str(b)) for a, b in subst_list])
 
         for (name, value) in subst_list:
             self.substitute(name, value)
 
     def unify(self, ref1, ref2, do):
-        print('items before sub', {s: str(v) for s, v in self.items.items()})
-        print('vars before sub', {s: v for s, v in self.variables.items()})
         subst = self.get_item_or_ref(ref1).unify(self.get_item_or_ref(ref2))
         if subst is not None:
             new_global_store = self.clone()
@@ -146,9 +141,6 @@ class Store:
 
             global global_store
             global_store = new_global_store
-
-            print('items after sub', {s: str(v) for s, v in new_global_store.items.items()})
-            print('vars after sub', {s: v for s, v in new_global_store.variables.items()})
 
             exc = None
             try:
