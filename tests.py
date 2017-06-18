@@ -143,3 +143,21 @@ class TestProlog(TestCase):
 
         p.go(C.make_const(1) & (C.make_const(2) & C.make_const(3)), go)
         self.assertEqual(w, 1)
+
+    def test_something(self):
+        x = V.make_variable("x")
+        y = V.make_variable("y")
+        p = Prolog()
+        p.fact(C.make_const(1).make_const('a'))
+        p.fact(C.make_const(2).make_const('b'))
+        p.head_body(x.pair(y.make_const('c')), x.make_const('a') & y.make_const('b'))
+        w = 0
+
+        def check():
+            nonlocal w
+            w += 1
+            self.assertEqual(x.value(), 1)
+            self.assertEqual(y.value(), 2)
+
+        p.go(x.pair(y.make_const('c')), check)
+        self.assertEqual(w, 1)
