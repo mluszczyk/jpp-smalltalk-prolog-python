@@ -48,6 +48,9 @@ class Handle:
     def to_conjunction(self) -> 'HandleConjunction':
         return HandleConjunction.from_handle(self)
 
+    def __str__(self):
+        return "handle {}".format(self.ref_)
+
 
 class HandleConjunction:
     def __init__(self, handles: typing.List[Handle]):
@@ -66,13 +69,19 @@ class HandleConjunction:
         return self
 
     def empty(self) -> bool:
-        return bool(self.handles)
+        return not self.handles
 
     def head(self) -> Handle:
         return self.handles[0]
 
     def tail(self) -> 'HandleConjunction':
         return HandleConjunction(self.handles[1:])
+
+    def __str__(self):
+        if self.empty():
+            return "HandleConjunction([])"
+        else:
+            return ", ".join(str(handle) for handle in self.handles)
 
 
 class C:
@@ -372,7 +381,16 @@ class Fact(Predicate):
         self.a: Handle = a
 
     def go(self, a: Handle, do: typing.Callable):
-        self.a.go(a, do)
+        print("({}) go {}".format(self.a, a))
+
+        def do_debug(arg_do):
+
+            def x():
+                print("went")
+                arg_do()
+            return x
+
+        self.a.go(a, do_debug(do))
 
 
 class HeadBody(Predicate):
@@ -401,14 +419,18 @@ class Prolog:
     def go(self, handle: typing.Union[Handle, HandleConjunction], do: typing.Callable):
         full_con = handle.to_conjunction()
 
-        def do_builder(handle_con):
+        def do_builder(handle_con, copy_do):
+            print("do_builder", handle_con)
+
             def inner_do():
+                print("inner_do", handle_con)
+
                 if handle_con.empty():
-                    do()
+                    copy_do()
                 else:
                     for item in self.predicates:
-                        item.go(handle_con.head(), do_builder(handle_con.tail())())
+                        item.go(handle_con.head(), do_builder(handle_con.tail(), copy_do))
 
             return inner_do
 
-        do_builder(full_con)()
+        do_builder(full_con, do)()

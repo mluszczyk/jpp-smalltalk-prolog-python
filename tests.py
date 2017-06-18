@@ -121,6 +121,8 @@ class TestProlog(TestCase):
     def test_and(self):
         w = 0
         p = Prolog()
+        for e in [1, 2, 3]:
+            p.fact(C.make_const(e))
 
         def go():
             nonlocal w
@@ -132,6 +134,8 @@ class TestProlog(TestCase):
     def test_and_nested(self):
         w = 0
         p = Prolog()
+        for e in [1, 2, 3]:
+            p.fact(C.make_const(e))
 
         def go():
             nonlocal w
