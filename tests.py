@@ -249,3 +249,30 @@ class TestProlog(TestCase):
              lambda: w.append(x.value()))
         self.assertEqual(w, [4, 2])
 
+    def test_instantiation_warmup(self):
+        x = V.make_variable("x")
+
+        p = Prolog()
+        p.fact(x)
+        w = 0
+
+        def do():
+            nonlocal w
+            w += 1
+
+        p.go(C.make_const(1), do)
+        self.assertEqual(w, 1)
+
+    def test_instantiation(self):
+        x = V.make_variable("x")
+
+        p = Prolog()
+        p.fact(x)
+        w = 0
+
+        def do():
+            nonlocal w
+            w += 1
+
+        p.go(C.make_const(1) & C.make_const(2), do)
+        self.assertEqual(w, 1)

@@ -51,6 +51,12 @@ class Handle:
     def __repr__(self):
         return "Handle({} => {})".format(self.ref_, global_store.get_item_or_ref(self.ref_))
 
+    def get_free_variables(self):
+        return global_store.get_free_vars(self.ref_)
+
+    def substitute(self, subst):
+        return Handle(global_store.substitute_ref(self.ref_, subst))
+
 
 class HandleConjunction:
     def __init__(self, handles: typing.List[Handle]):
@@ -80,6 +86,14 @@ class HandleConjunction:
     def __repr__(self):
         return "HandleConjunction([{}])".format(
             ", ".join(str(handle) for handle in self.handles))
+
+    def get_free_variables(self):
+        return [item
+                for handle in self.handles
+                for item in handle.get_free_variables()]
+
+    def substitute(self, subst):
+        return HandleConjunction([handle.substitute(subst) for handle in self.handles])
 
 
 class C:
@@ -202,6 +216,23 @@ class Store:
             self.variables
         )
 
+    def get_free_vars(self, ref):
+        return self.get_item_or_ref(ref).get_free_vars()
+
+    def clone_variables(self, vars_list):
+        vars_list = list(set(vars_list))
+        return [(var, RefValue(self.get_next_ref())) for var in vars_list]
+
+    def substitute_ref(self, ref, subst_list):
+        value = self.items.get(ref)
+        new_ref = self.get_next_ref()
+
+        if value is not None:
+            new_value = value.clone()
+            self.items[new_ref] = new_value.substitute_list(subst_list)
+
+        return new_ref
+
 
 global_store = Store()
 
@@ -216,7 +247,7 @@ class Value:
     def value(self):
         raise NotImplementedError()
 
-    def clone(self):
+    def clone(self) -> 'Value':
         raise NotImplementedError()
 
     def substitute(self, ref, value: 'Value') -> 'Value':
@@ -239,6 +270,15 @@ class Value:
 
     def has_occurrence(self, ref):
         raise NotImplementedError()
+
+    def get_free_vars(self):
+        raise NotImplementedError()
+
+    def substitute_list(self, subst_list):
+        new_val = self
+        for ref, val in subst_list:
+            new_val = new_val.substitute(ref, val)
+        return new_val
 
 
 class ConstValue(Value):
@@ -281,6 +321,9 @@ class ConstValue(Value):
 
     def has_occurrence(self, ref):
         return False
+
+    def get_free_vars(self):
+        return []
 
 
 class PairValue(Value):
@@ -329,6 +372,9 @@ class PairValue(Value):
     def has_occurrence(self, ref):
         return self.key1.has_occurrence(ref) or self.key2.has_occurrence(ref)
 
+    def get_free_vars(self):
+        return self.key1.get_free_vars() + self.key2.get_free_vars()
+
 
 class RefValue(Value):
     def __init__(self, ref):
@@ -375,12 +421,18 @@ class RefValue(Value):
     def has_occurrence(self, ref):
         return self.ref == ref
 
+    def get_free_vars(self):
+        return [self.ref]
+
 
 L = C.make_const(None)
 
 
 class Predicate:
     def go(self, query: typing.Union['Handle', 'HandleConjunction'], do: typing.Callable):
+        raise NotImplementedError()
+
+    def with_new_free_variables(self):
         raise NotImplementedError()
 
 
@@ -390,6 +442,7 @@ class Fact(Predicate):
 
     def go(self, a: Handle, do: typing.Callable):
         print("({}) go {}".format(self.a, a))
+        copy = self.with_new_free_variables()
 
         def do_debug(arg_do):
 
@@ -399,10 +452,18 @@ class Fact(Predicate):
                 print("unwent")
             return x
 
-        self.a.go(a, do_debug(do))
+        copy.a.go(a, do_debug(do))
 
     def __repr__(self):
         return "Fact({})".format(self.a)
+
+    def with_new_free_variables(self):
+        free_vars = self.a.get_free_variables()
+        print("free vars", free_vars)
+        subst = global_store.clone_variables(free_vars)
+        print("instantiation subst", subst)
+        new_a = self.a.substitute(subst)
+        return Fact(new_a)
 
 
 class HeadBody(Predicate):
@@ -412,13 +473,23 @@ class HeadBody(Predicate):
         self.prolog: Prolog = prolog
 
     def go(self, query: Handle, do: typing.Callable):
-        def inner_do():
-            self.prolog.go(self.body, do)
+        copy = self.with_new_free_variables()
 
-        self.head.go(query, inner_do)
+        def inner_do():
+            self.prolog.go(copy.body, do)
+
+        copy.head.go(query, inner_do)
 
     def __repr__(self):
         return "HeadBody({}, {})".format(self.head, self.body)
+
+    def with_new_free_variables(self):
+        vars_head = self.head.get_free_variables()
+        vars_tail = self.body.get_free_variables()
+        subst = global_store.clone_variables(vars_head + vars_tail)
+        new_head = self.head.substitute(subst)
+        new_body = self.body.substitute(subst)
+        return HeadBody(self.prolog, new_head, new_body)
 
 
 class Prolog:
@@ -426,10 +497,10 @@ class Prolog:
         self.predicates: typing.List[Predicate] = []
 
     def fact(self, a):
-        self.predicates.append(Fact(a))
+        self.predicates.append(Fact(a).with_new_free_variables())
 
     def head_body(self, head, body):
-        self.predicates.append(HeadBody(self, head, body))
+        self.predicates.append(HeadBody(self, head, body).with_new_free_variables())
 
     def go(self, handle: typing.Union[Handle, HandleConjunction], do: typing.Callable):
         full_con = handle.to_conjunction()
