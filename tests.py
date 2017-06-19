@@ -106,6 +106,18 @@ class TestOne(TestCase):
         x = V.make_variable('x')
         x.go(L.pair(x), lambda: self.assertTrue(False))
 
+    def test_unification(self):
+        x = V.make_variable("x")
+        y = V.make_variable("y")
+
+        pattern = x.pair(y.pair(x))
+        value = C.make_const(3).pair(L.pair(C.make_const(2)))
+
+        def check():
+            assert False
+
+        pattern.go(value, check)
+
 
 class TestProlog(TestCase):
     def test(self):
@@ -260,6 +272,24 @@ class TestProlog(TestCase):
              lambda: w.append(x.value()))
         self.assertEqual(w, [3, 2, 1])
 
+    def test_member_hard_warmup_no_solutions(self):
+        x = V.make_variable("x")
+        y = V.make_variable("y")
+        z = V.make_variable("z")
+
+        p = Prolog()
+        p.fact(x.pair(y.pair(x)).make_const("member"))
+        p.head_body(x.pair(y.pair(z)).make_const("member"),
+                    x.pair(y).make_const("member"))
+
+        w = []
+        m = L.make_const(2)
+        n = L.make_const(3)
+        p.go(x.pair(m).make_const("member") &
+             x.pair(n).make_const("member"),
+             lambda: w.append(x.value()))
+        self.assertEqual(w, [])
+
     def test_member_hard(self):
         x = V.make_variable("x")
         y = V.make_variable("y")
@@ -323,11 +353,19 @@ class TestProlog(TestCase):
     def test_conjunction(self):
         x = V.make_variable('x')
         p = Prolog()
-        p.fact(C.make_const(1))
-        p.fact(C.make_const(2))
-        p.fact(C.make_const(x.pair(x)))
+        p.fact(C.make_const(1).make_const("single"))
+        p.fact(C.make_const(2).make_const("single"))
+        p.head_body(x.pair(x).make_const("double"), x.make_const("single"))
+        print(p)
 
         w = []
 
-        p.go(x.pair(x), lambda: w.append((x.value())))
-        self.assertEqual(w, [2, 1])
+        def check():
+            w.append(x.value())
+            if check.counter >= 10:
+                assert False
+            check.counter += 1
+        check.counter = 0
+
+        p.go(x.pair(x).make_const("double"), check)
+        self.assertEqual(w, [1, 2])

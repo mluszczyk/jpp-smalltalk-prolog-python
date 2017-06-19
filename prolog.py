@@ -189,12 +189,9 @@ class Store:
 
     def unify(self, ref1, ref2, do):
         subst = self.get_item_or_ref(ref1).unify(self.get_item_or_ref(ref2))
-        print("store pre", self)
-        print("subst: ", subst)
         if subst is not None:
             new_global_store = self.clone()
             new_global_store.substitute_list(subst)
-            print("store post", new_global_store)
 
             global global_store
             global_store = new_global_store
@@ -222,17 +219,22 @@ class Store:
 
     def clone_variables(self, vars_list):
         vars_list = list(set(vars_list))
-        return [(var, RefValue(self.get_next_ref())) for var in vars_list]
+        return [(var, self.get_next_ref()) for var in vars_list]
 
     def substitute_ref(self, ref, subst_list):
         value = self.items.get(ref)
-        new_ref = self.get_next_ref()
 
         if value is not None:
-            new_value = value.clone()
-            self.items[new_ref] = new_value.substitute_list(subst_list)
+            new_ref = self.get_next_ref()
 
-        return new_ref
+            new_value = value.clone()
+            self.items[new_ref] = new_value.substitute_ref_list(subst_list)
+            return new_ref
+        else:
+            for (sub_ref, sub_val) in subst_list:
+                if sub_ref == ref:
+                    return sub_val
+            return ref
 
 
 global_store = Store()
@@ -275,10 +277,13 @@ class Value:
     def get_free_vars(self):
         raise NotImplementedError()
 
-    def substitute_list(self, subst_list):
+    def substitute_ref(self, old_ref, new_ref) -> 'Value':
+        raise NotImplementedError()
+
+    def substitute_ref_list(self, subst_list):
         new_val = self
-        for ref, val in subst_list:
-            new_val = new_val.substitute(ref, val)
+        for ref, new_ref in subst_list:
+            new_val = new_val.substitute_ref(ref, new_ref)
         return new_val
 
 
@@ -325,6 +330,9 @@ class ConstValue(Value):
 
     def get_free_vars(self):
         return []
+
+    def substitute_ref(self, old_ref, new_ref):
+        return self
 
 
 class PairValue(Value):
@@ -376,6 +384,10 @@ class PairValue(Value):
     def get_free_vars(self):
         return self.value1.get_free_vars() + self.value2.get_free_vars()
 
+    def substitute_ref(self, old_ref, new_ref):
+        return PairValue(self.value1.substitute_ref(old_ref, new_ref),
+                         self.value2.substitute_ref(old_ref, new_ref))
+
 
 class RefValue(Value):
     def __init__(self, ref):
@@ -425,6 +437,12 @@ class RefValue(Value):
     def get_free_vars(self):
         return [self.ref]
 
+    def substitute_ref(self, old_ref, new_ref):
+        if self.ref == old_ref:
+            return RefValue(new_ref)
+        else:
+            return self
+
 
 L = C.make_const(None)
 
@@ -442,7 +460,7 @@ class Fact(Predicate):
         self.a: Handle = a
 
     def go(self, a: Handle, do: typing.Callable):
-        print("{} go {}".format(self, a))
+        print(">> {} go {}".format(self, a))
         copy = self.with_new_free_variables()
         print("cloned: ", copy)
 
@@ -473,7 +491,7 @@ class HeadBody(Predicate):
         self.prolog: Prolog = prolog
 
     def go(self, query: Handle, do: typing.Callable):
-        print("{} go {}".format(self, query))
+        print(">> {} go {}".format(self, query))
         copy = self.with_new_free_variables()
         print("cloned", copy)
 
@@ -512,6 +530,7 @@ class Prolog:
                 print("inner_do", handle_con)
 
                 if handle_con.empty():
+                    print("*** call do")
                     copy_do()
                 else:
                     for item in self.predicates:
