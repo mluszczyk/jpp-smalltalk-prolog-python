@@ -216,6 +216,34 @@ class TestProlog(TestCase):
         p.go(x.pair(y).make_const('c'), check)
         self.assertEqual(w, 1)
 
+    def test_member_single_element(self):
+        x = V.make_variable("x")
+        y = V.make_variable("y")
+        z = V.make_variable("z")
+
+        p = Prolog()
+        p.fact(x.pair(y.pair(x)).make_const("member"))
+        p.head_body(x.pair(y.pair(z)).make_const("member"),
+                    x.pair(y).make_const("member"))
+
+        w = []
+        p.go(x.pair(L.make_const(1)).make_const("member"), lambda: w.append(x.value()))
+        self.assertEqual(w, [1])
+
+    def test_member_two_elements(self):
+        x = V.make_variable("x")
+        y = V.make_variable("y")
+        z = V.make_variable("z")
+
+        p = Prolog()
+        p.fact(x.pair(y.pair(x)).make_const("member"))
+        p.head_body(x.pair(y.pair(z)).make_const("member"),
+                    x.pair(y).make_const("member"))
+
+        w = []
+        p.go(x.pair(L.make_const(1).make_const(2)).make_const("member"), lambda: w.append(x.value()))
+        self.assertEqual(w, [2, 1])
+
     def test_member(self):
         x = V.make_variable("x")
         y = V.make_variable("y")
@@ -227,7 +255,7 @@ class TestProlog(TestCase):
                     x.pair(y).make_const("member"))
 
         w = []
-        p.go(x.pair(L.make_const(1).make_const(2).make_const(3)),
+        p.go(x.pair(L.make_const(1).make_const(2).make_const(3)).make_const("member"),
              lambda: w.append(x.value()))
         self.assertEqual(w, [3, 2, 1])
 
@@ -276,3 +304,17 @@ class TestProlog(TestCase):
 
         p.go(C.make_const(1) & C.make_const(2), do)
         self.assertEqual(w, 1)
+
+    def test_two_answers(self):
+        x = V.make_variable("x")
+        y = V.make_variable("y")
+
+        p = Prolog()
+        p.fact(x)
+        p.fact(y)
+
+        w = []
+
+        p.go(C.make_const(1), lambda: w.append(None))
+
+        self.assertEqual(w, [None, None])
