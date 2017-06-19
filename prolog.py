@@ -193,20 +193,22 @@ class Store:
             new_global_store = self.clone()
             new_global_store.substitute_list(subst)
 
-            global global_store
-            global_store = new_global_store
+            self.push_store(new_global_store, do)
 
-            exc = None
-            try:
-                do()
-            except Exception as e:
-                exc = e
+    def push_store(self, new_store, do):
+        global global_store
+        global_store = new_store
 
-            global_store = self
-            print("leaving store")
+        exc = None
+        try:
+            do()
+        except Exception as e:
+            exc = e
 
-            if exc is not None:
-                raise exc
+        global_store = self
+
+        if exc is not None:
+            raise exc
 
     def __repr__(self):
         return "items: {}; vars: {}".format(
