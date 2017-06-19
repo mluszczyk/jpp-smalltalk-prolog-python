@@ -188,12 +188,23 @@ class Store:
             self.substitute(name, value)
 
     def unify(self, ref1, ref2, do):
+        print("unify \n{} with \n{}".format(self.get_item_or_ref(ref1), self.get_item_or_ref(ref2)))
         subst = self.get_item_or_ref(ref1).unify(self.get_item_or_ref(ref2))
-        if subst is not None:
+        print("subst", subst)
+
+        if subst is None:
+            pass
+        else:
             new_global_store = self.clone()
             new_global_store.substitute_list(subst)
 
-            self.push_store(new_global_store, do)
+            if not subst:
+                self.push_store(new_global_store, do)
+            else:
+                def new_do():
+                    global_store.unify(ref1, ref2, do)
+
+                self.push_store(new_global_store, new_do)
 
     def push_store(self, new_store, do):
         global global_store
@@ -264,7 +275,7 @@ class Value:
     def unify_with_const(self, const_value):
         raise NotImplementedError()
 
-    def unify_with_var(self, var: 'Value'):
+    def unify_with_var(self, ref):
         raise NotImplementedError()
 
     def unify_with_pair(self, a: 'Value', b: 'Value'):
@@ -324,8 +335,8 @@ class ConstValue(Value):
     def unify_with_pair(self, a, b):
         return None
 
-    def unify_with_var(self, value: Value):
-        return value.unify_with_const(self.val)
+    def unify_with_var(self, ref):
+        return RefValue(ref).unify_with_const(self.val)
 
     def has_occurrence(self, ref):
         return False
@@ -374,8 +385,8 @@ class PairValue(Value):
             return None
         return subst1 + subst2
 
-    def unify_with_var(self, var: Value):
-        return var.unify_with_pair(self.value1, self.value2)
+    def unify_with_var(self, ref):
+        return RefValue(ref).unify_with_pair(self.value1, self.value2)
 
     def unify(self, other):
         return other.unify_with_pair(self.value1, self.value2)
@@ -417,7 +428,7 @@ class RefValue(Value):
         return "ref ({})".format(self.ref)
 
     def unify(self, other: Value):
-        return other.unify_with_var(self)
+        return other.unify_with_var(self.ref)
 
     def unify_with_const(self, value):
         return [(self.ref, ConstValue(value))]
@@ -427,8 +438,11 @@ class RefValue(Value):
             return None
         return [(self.ref, PairValue(a, b))]
 
-    def unify_with_var(self, other: Value):
-        return [(self.ref, other)]
+    def unify_with_var(self, ref):
+        if ref == self.ref:
+            return []
+        else:
+            return [(self.ref, RefValue(ref))]
 
     def get_ref(self):
         return self.ref
