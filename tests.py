@@ -216,7 +216,6 @@ class TestProlog(TestCase):
             self.assertEqual(x.value(), 1)
             self.assertEqual(y.value(), 2)
 
-        print(global_store)
         p.go(x.make_const('a') & y.make_const('b'), check)
         self.assertEqual(w, 1)
 
@@ -228,8 +227,6 @@ class TestProlog(TestCase):
         p.fact(C.make_const(2).make_const('b'))
         p.head_body(x.pair(y).make_const('c'), x.make_const('a') & y.make_const('b'))
         w = 0
-
-        print(p)
 
         def check():
             nonlocal w
@@ -264,7 +261,6 @@ class TestProlog(TestCase):
         p.head_body(x.pair(y.pair(z)).make_const("member"),
                     x.pair(y).make_const("member"))
 
-        print(p)
         w = []
         p.go(x.pair(L.make_const(1).make_const(2)).make_const("member"), lambda: w.append(x.value()))
         self.assertEqual(w, [2, 1])
@@ -368,7 +364,6 @@ class TestProlog(TestCase):
         p.fact(C.make_const(1).make_const("single"))
         p.fact(C.make_const(2).make_const("single"))
         p.head_body(x.pair(x).make_const("double"), x.make_const("single"))
-        print(p)
 
         w = []
 

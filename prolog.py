@@ -177,9 +177,7 @@ class Store:
             self.substitute(name, value)
 
     def unify(self, ref1, ref2, do):
-        print("unify \n{} with \n{}".format(self.get_item_or_ref(ref1), self.get_item_or_ref(ref2)))
         subst = self.get_item_or_ref(ref1).unify(self.get_item_or_ref(ref2))
-        print("subst", subst)
 
         if subst is None:
             pass
@@ -465,19 +463,8 @@ class Fact(Predicate):
         self.a: Handle = a
 
     def go(self, a: Handle, do: typing.Callable):
-        print(">> {} go {}".format(self, a))
         copy = self.with_new_free_variables()
-        print("cloned: ", copy)
-
-        def do_debug(arg_do):
-
-            def x():
-                print("went")
-                arg_do()
-                print("unwent")
-            return x
-
-        copy.a.go(a, do_debug(do))
+        copy.a.go(a, do)
 
     def __repr__(self):
         return "Fact({})".format(self.a)
@@ -496,9 +483,7 @@ class HeadBody(Predicate):
         self.prolog: Prolog = prolog
 
     def go(self, query: Handle, do: typing.Callable):
-        print(">> {} go {}".format(self, query))
         copy = self.with_new_free_variables()
-        print("cloned", copy)
 
         def inner_do():
             self.prolog.go(copy.body, do)
@@ -532,10 +517,8 @@ class Prolog:
 
         def do_builder(handle_con, copy_do):
             def inner_do():
-                print("inner_do", handle_con)
 
                 if handle_con.empty():
-                    print("*** call do")
                     copy_do()
                 else:
                     for item in self.predicates:
