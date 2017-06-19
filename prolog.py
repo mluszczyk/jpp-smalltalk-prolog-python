@@ -172,18 +172,7 @@ class Store:
 
         self.items = new_items
 
-    @staticmethod
-    def fix_subst_list(subst_list):
-        num = len(subst_list)
-        for num in range(num):
-            name, val = subst_list[num]
-            for inum, (iname, ival) in enumerate(subst_list):
-                subst_list[inum] = (iname, ival.substitute(name, val))
-        return subst_list
-
     def substitute_list(self, subst_list):
-        self.fix_subst_list(subst_list)
-
         for (name, value) in subst_list:
             self.substitute(name, value)
 
