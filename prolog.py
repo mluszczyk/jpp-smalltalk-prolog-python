@@ -353,9 +353,8 @@ class PairValue(Value):
         return PairValue(self.value1.clone(), self.value2.clone())
 
     def substitute(self, ref, value: Value):
-        self.value1 = self.value1.substitute(ref, value)
-        self.value2 = self.value2.substitute(ref, value)
-        return self
+        return PairValue(self.value1.substitute(ref, value),
+                         self.value2.substitute(ref, value))
 
     def __repr__(self):
         return "pair ({}), ({})".format(self.value1, self.value2)
