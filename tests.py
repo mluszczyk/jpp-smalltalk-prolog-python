@@ -240,6 +240,7 @@ class TestProlog(TestCase):
         p.head_body(x.pair(y.pair(z)).make_const("member"),
                     x.pair(y).make_const("member"))
 
+        print(p)
         w = []
         p.go(x.pair(L.make_const(1).make_const(2)).make_const("member"), lambda: w.append(x.value()))
         self.assertEqual(w, [2, 1])
@@ -318,3 +319,15 @@ class TestProlog(TestCase):
         p.go(C.make_const(1), lambda: w.append(None))
 
         self.assertEqual(w, [None, None])
+
+    def test_conjunction(self):
+        x = V.make_variable('x')
+        p = Prolog()
+        p.fact(C.make_const(1))
+        p.fact(C.make_const(2))
+        p.fact(C.make_const(x.pair(x)))
+
+        w = []
+
+        p.go(x.pair(x), lambda: w.append((x.value())))
+        self.assertEqual(w, [2, 1])

@@ -165,9 +165,10 @@ class Store:
         return new_store
 
     def substitute(self, name, value: 'Value'):
-        new_items = {name: value}
+        new_items = {}
         for left, right in self.items.items():
             new_items[left] = right.substitute(name, value)
+        new_items[name] = value
 
         self.items = new_items
 
@@ -182,7 +183,6 @@ class Store:
 
     def substitute_list(self, subst_list):
         self.fix_subst_list(subst_list)
-        print("fixed", subst_list)
 
         for (name, value) in subst_list:
             self.substitute(name, value)
@@ -206,6 +206,7 @@ class Store:
                 exc = e
 
             global_store = self
+            print("leaving store")
 
             if exc is not None:
                 raise exc
@@ -327,53 +328,53 @@ class ConstValue(Value):
 
 
 class PairValue(Value):
-    def __init__(self, key1: Value, key2: Value):
-        self.key1: Value = key1
-        self.key2: Value = key2
+    def __init__(self, value1: Value, value2: Value):
+        self.value1: Value = value1
+        self.value2: Value = value2
 
     def value(self):
         return self.car().value(), self.cdr().value()
 
     def car(self):
-        return self.key1
+        return self.value1
 
     def cdr(self):
-        return self.key2
+        return self.value2
 
     def clone(self):
-        return PairValue(self.key1, self.key2)
+        return PairValue(self.value1.clone(), self.value2.clone())
 
     def substitute(self, ref, value: Value):
-        self.key1 = self.key1.substitute(ref, value)
-        self.key2 = self.key2.substitute(ref, value)
+        self.value1 = self.value1.substitute(ref, value)
+        self.value2 = self.value2.substitute(ref, value)
         return self
 
     def __repr__(self):
-        return "pair ({}), ({})".format(self.key1, self.key2)
+        return "pair ({}), ({})".format(self.value1, self.value2)
 
     def unify_with_const(self, const):
         return None
 
     def unify_with_pair(self, a: Value, b: Value):
-        subst1 = self.key1.unify(a)
+        subst1 = self.value1.unify(a)
         if subst1 is None:
             return None
-        subst2 = self.key2.unify(b)
+        subst2 = self.value2.unify(b)
         if subst2 is None:
             return None
         return subst1 + subst2
 
     def unify_with_var(self, var: Value):
-        return var.unify_with_pair(self.key1, self.key2)
+        return var.unify_with_pair(self.value1, self.value2)
 
     def unify(self, other):
-        return other.unify_with_pair(self.key1, self.key2)
+        return other.unify_with_pair(self.value1, self.value2)
 
     def has_occurrence(self, ref):
-        return self.key1.has_occurrence(ref) or self.key2.has_occurrence(ref)
+        return self.value1.has_occurrence(ref) or self.value2.has_occurrence(ref)
 
     def get_free_vars(self):
-        return self.key1.get_free_vars() + self.key2.get_free_vars()
+        return self.value1.get_free_vars() + self.value2.get_free_vars()
 
 
 class RefValue(Value):
@@ -441,8 +442,9 @@ class Fact(Predicate):
         self.a: Handle = a
 
     def go(self, a: Handle, do: typing.Callable):
-        print("({}) go {}".format(self.a, a))
+        print("{} go {}".format(self, a))
         copy = self.with_new_free_variables()
+        print("cloned: ", copy)
 
         def do_debug(arg_do):
 
@@ -459,9 +461,7 @@ class Fact(Predicate):
 
     def with_new_free_variables(self):
         free_vars = self.a.get_free_variables()
-        print("free vars", free_vars)
         subst = global_store.clone_variables(free_vars)
-        print("instantiation subst", subst)
         new_a = self.a.substitute(subst)
         return Fact(new_a)
 
@@ -473,7 +473,9 @@ class HeadBody(Predicate):
         self.prolog: Prolog = prolog
 
     def go(self, query: Handle, do: typing.Callable):
+        print("{} go {}".format(self, query))
         copy = self.with_new_free_variables()
+        print("cloned", copy)
 
         def inner_do():
             self.prolog.go(copy.body, do)
@@ -506,8 +508,6 @@ class Prolog:
         full_con = handle.to_conjunction()
 
         def do_builder(handle_con, copy_do):
-            print("do_builder", handle_con)
-
             def inner_do():
                 print("inner_do", handle_con)
 
