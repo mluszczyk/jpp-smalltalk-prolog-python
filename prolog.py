@@ -1,18 +1,6 @@
 import typing
 
 
-class Pair:
-    def __init__(self, item1, item2):
-        self.item1 = item1
-        self.item2 = item2
-
-    def car(self):
-        return self.item1
-
-    def cdr(self):
-        return self.item2
-
-
 class Handle:
     def __init__(self, ref):
         self.ref_ = ref
