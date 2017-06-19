@@ -118,6 +118,18 @@ class TestOne(TestCase):
 
         pattern.go(value, check)
 
+    def test_unify_pair(self):
+        x = V.make_variable('x')
+        y = V.make_variable('y')
+
+        w = []
+
+        def do():
+            x.pair(y).go(C.make_const(1).make_const(1), lambda: w.append(None))
+
+        x.go(y, do)
+        self.assertEqual(w, [None])
+
 
 class TestProlog(TestCase):
     def test(self):
