@@ -96,20 +96,30 @@ class V:
         return Handle(global_store.make_variable(name))
 
 
+class NextRef:
+    def __init__(self, value):
+        self.value = value
+
+    def get(self):
+        value = self.value
+        self.value += 1
+        return value
+
+    def clone(self):
+        return NextRef(self.value)
+
+
 class Store:
     def __init__(self):
         self.items: typing.Dict[typing.Any, Value] = {}
         self.variables = {}
-        self.next_ref = 0
+        self.next_ref = NextRef(0)
 
     def get_next_ref(self):  # factor it out into a separate class
-        ref = self.next_ref
-        self.next_ref += 1
-        return ref
+        return self.next_ref.get()
 
     def make_const(self, val):
-        ref = self.next_ref
-        self.next_ref += 1
+        ref = self.get_next_ref()
         self.items[ref] = ConstValue(val)
         return ref
 
@@ -149,7 +159,7 @@ class Store:
         new_store = Store()
         new_store.items = {k: v.clone() for k, v in self.items.items()}
         new_store.variables = self.variables.copy()
-        new_store.next_ref = self.next_ref
+        new_store.next_ref = self.next_ref.clone()
         return new_store
 
     def substitute(self, name, value: 'Value'):
