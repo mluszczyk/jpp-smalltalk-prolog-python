@@ -48,8 +48,8 @@ class Handle:
     def to_conjunction(self) -> 'HandleConjunction':
         return HandleConjunction.from_handle(self)
 
-    def __str__(self):
-        return "handle {}".format(self.ref_)
+    def __repr__(self):
+        return "Handle({} => {})".format(self.ref_, global_store.get_item_or_ref(self.ref_))
 
 
 class HandleConjunction:
@@ -77,11 +77,9 @@ class HandleConjunction:
     def tail(self) -> 'HandleConjunction':
         return HandleConjunction(self.handles[1:])
 
-    def __str__(self):
-        if self.empty():
-            return "HandleConjunction([])"
-        else:
-            return ", ".join(str(handle) for handle in self.handles)
+    def __repr__(self):
+        return "HandleConjunction([{}])".format(
+            ", ".join(str(handle) for handle in self.handles))
 
 
 class C:
@@ -170,15 +168,19 @@ class Store:
 
     def substitute_list(self, subst_list):
         self.fix_subst_list(subst_list)
+        print("fixed", subst_list)
 
         for (name, value) in subst_list:
             self.substitute(name, value)
 
     def unify(self, ref1, ref2, do):
         subst = self.get_item_or_ref(ref1).unify(self.get_item_or_ref(ref2))
+        print("store pre", self)
+        print("subst: ", subst)
         if subst is not None:
             new_global_store = self.clone()
             new_global_store.substitute_list(subst)
+            print("store post", new_global_store)
 
             global global_store
             global_store = new_global_store
@@ -193,6 +195,12 @@ class Store:
 
             if exc is not None:
                 raise exc
+
+    def __repr__(self):
+        return "items: {}; vars: {}".format(
+            {k: str(v) for k, v in self.items.items()},
+            self.variables
+        )
 
 
 global_store = Store()
@@ -211,7 +219,7 @@ class Value:
     def clone(self):
         raise NotImplementedError()
 
-    def substitute(self, ref, value: 'Value'):
+    def substitute(self, ref, value: 'Value') -> 'Value':
         raise NotImplementedError()
 
     def unify(self, other):
@@ -252,7 +260,7 @@ class ConstValue(Value):
     def substitute(self, ref, value: Value):
         return self
 
-    def __str__(self):
+    def __repr__(self):
         return "const ({})".format(self.val)
 
     def unify(self, other) ->\
@@ -297,7 +305,7 @@ class PairValue(Value):
         self.key2 = self.key2.substitute(ref, value)
         return self
 
-    def __str__(self):
+    def __repr__(self):
         return "pair ({}), ({})".format(self.key1, self.key2)
 
     def unify_with_const(self, const):
@@ -338,13 +346,13 @@ class RefValue(Value):
     def clone(self):
         return RefValue(self.ref)
 
-    def substitute(self, ref, value: Value):
+    def substitute(self, ref, value: Value) -> Value:
         if self.ref == ref:
             return value
         else:
-            return value
+            return self
 
-    def __str__(self):
+    def __repr__(self):
         return "ref ({})".format(self.ref)
 
     def unify(self, other: Value):
@@ -388,9 +396,13 @@ class Fact(Predicate):
             def x():
                 print("went")
                 arg_do()
+                print("unwent")
             return x
 
         self.a.go(a, do_debug(do))
+
+    def __repr__(self):
+        return "Fact({})".format(self.a)
 
 
 class HeadBody(Predicate):
@@ -404,6 +416,9 @@ class HeadBody(Predicate):
             self.prolog.go(self.body, do)
 
         self.head.go(query, inner_do)
+
+    def __repr__(self):
+        return "HeadBody({}, {})".format(self.head, self.body)
 
 
 class Prolog:
@@ -434,3 +449,6 @@ class Prolog:
             return inner_do
 
         do_builder(full_con, do)()
+
+    def __repr__(self):
+        return "Prolog([{}])".format(", ".join(str(pred) for pred in self.predicates))
