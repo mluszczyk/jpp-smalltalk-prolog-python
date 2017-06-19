@@ -369,3 +369,48 @@ class TestProlog(TestCase):
 
         p.go(x.pair(x).make_const("double"), check)
         self.assertEqual(w, [1, 2])
+
+    def test_last(self):
+        a = V.make_variable('a')
+        b = V.make_variable('b')
+        c = V.make_variable('c')
+
+        x = V.make_variable('x')
+        y = V.make_variable('y')
+        z = V.make_variable('z')
+
+        p = Prolog()
+        p.fact(x.pair(y.pair(x)).make_const("member"))
+        p.head_body(x.pair(y.pair(z)).make_const("member"),
+                    x.pair(y).make_const("member"))
+
+        p.fact(L.pair(x).pair(x).make_const("append"))
+        p.head_body(a.pair(x).pair(b).pair(c.pair(x)).make_const("append"),
+                    a.pair(b).pair(c).make_const("append"))
+
+        def do():
+            for q in [x, y]:
+                s = []
+                p.go(a.pair(q).make_const("member"), lambda: s.append(a.value()))
+                w.append(s)
+
+        w = []
+        p.go(x.pair(y).pair(
+                L.make_const('c').make_const('b').make_const('a')
+            ).make_const('append'),
+             do
+            )
+
+        self.assertEqual(
+            w,
+             [
+                 [],
+                 ['a', 'b', 'c'],
+                 ['a'],
+                 ['b', 'c'],
+                 ['a', 'b'],
+                 ['c'],
+                 ['a', 'b', 'c'],
+                 []
+             ]
+        )
