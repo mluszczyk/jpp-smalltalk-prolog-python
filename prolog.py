@@ -505,18 +505,11 @@ class Prolog:
     def go(self, handle: typing.Union[Handle, HandleConjunction], do: typing.Callable):
         full_con = handle.to_conjunction()
 
-        def do_builder(handle_con, copy_do):
-            def inner_do():
-
-                if handle_con.empty():
-                    copy_do()
-                else:
-                    for item in self.predicates:
-                        item.go(handle_con.head(), do_builder(handle_con.tail(), copy_do))
-
-            return inner_do
-
-        do_builder(full_con, do)()
+        if full_con.empty():
+            do()
+        else:
+            for item in self.predicates:
+                item.go(full_con.head(), lambda: self.go(full_con.tail(), do))
 
     def __repr__(self):
         return "Prolog([{}])".format(", ".join(str(pred) for pred in self.predicates))
