@@ -9,10 +9,10 @@ class Handle:
         return global_store.value(self.ref_)
 
     def car(self):
-        return global_store.car(self. ref_)
+        return Handle(global_store.car(self.ref_))
 
     def cdr(self):
-        return global_store.cdr(self.ref_)
+        return Handle(global_store.cdr(self.ref_))
 
     def pair(self, other):
         """should be #,"""
@@ -147,10 +147,14 @@ class Store:
         return self.get_item(ref).value()
 
     def car(self, ref):
-        return self.get_item(ref).car()
+        res = self.next_ref.get()
+        self.items[res] = self.get_item(ref).car()
+        return res
 
     def cdr(self, ref):
-        return self.get_item(ref).cdr()
+        res = self.next_ref.get()
+        self.items[res] = self.get_item(ref).cdr()
+        return res
 
     def clone(self) -> 'Store':
         new_store = Store()
