@@ -181,12 +181,12 @@ class Store:
         if subst is None:
             pass
         else:
-            new_global_store = self.clone()
-            new_global_store.substitute_list(subst)
-
             if not subst:
-                self.push_store(new_global_store, do)
+                do()
             else:
+                new_global_store = self.clone()
+                new_global_store.substitute_list(subst)
+
                 def new_do():
                     global_store.unify(ref1, ref2, do)
 
