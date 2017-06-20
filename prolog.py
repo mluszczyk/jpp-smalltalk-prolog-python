@@ -225,9 +225,7 @@ class Store:
 
         if value is not None:
             new_ref = self.next_ref.get()
-
-            new_value = value.clone()
-            self.items[new_ref] = new_value.substitute_ref_list(subst_list)
+            self.items[new_ref] = value.substitute_ref_list(subst_list)
             return new_ref
         else:
             for (sub_ref, sub_val) in subst_list:
