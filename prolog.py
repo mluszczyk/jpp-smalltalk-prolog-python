@@ -266,9 +266,6 @@ class Value:
     def unify_with_pair(self, a: 'Value', b: 'Value'):
         raise NotImplementedError()
 
-    def get_ref(self):
-        raise Exception("not a ref")
-
     def has_occurrence(self, ref):
         raise NotImplementedError()
 
@@ -427,9 +424,6 @@ class RefValue(Value):
             return []
         else:
             return [(self.ref, RefValue(ref))]
-
-    def get_ref(self):
-        return self.ref
 
     def has_occurrence(self, ref):
         return self.ref == ref
