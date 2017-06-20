@@ -115,21 +115,18 @@ class Store:
         self.variables = {}
         self.next_ref = NextRef(0)
 
-    def get_next_ref(self):  # factor it out into a separate class
-        return self.next_ref.get()
-
     def make_const(self, val):
-        ref = self.get_next_ref()
+        ref = self.next_ref.get()
         self.items[ref] = ConstValue(val)
         return ref
 
     def make_variable(self, name):
         if name not in self.variables:
-            self.variables[name] = self.get_next_ref()
+            self.variables[name] = self.next_ref.get()
         return self.variables[name]
 
     def make_pair(self, ref1, ref2):
-        ref = self.get_next_ref()
+        ref = self.next_ref.get()
         self.items[ref] = PairValue(self.get_item_or_ref(ref1),
                                     self.get_item_or_ref(ref2))
         return ref
@@ -217,13 +214,13 @@ class Store:
 
     def clone_variables(self, vars_list):
         vars_list = list(set(vars_list))
-        return [(var, self.get_next_ref()) for var in vars_list]
+        return [(var, self.next_ref.get()) for var in vars_list]
 
     def substitute_ref(self, ref, subst_list):
         value = self.items.get(ref)
 
         if value is not None:
-            new_ref = self.get_next_ref()
+            new_ref = self.next_ref.get()
 
             new_value = value.clone()
             self.items[new_ref] = new_value.substitute_ref_list(subst_list)
